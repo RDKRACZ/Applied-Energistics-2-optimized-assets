@@ -14,8 +14,9 @@ import com.mojang.math.Matrix4f;
 import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
 
-import net.minecraft.client.renderer.FogRenderer;
 import org.lwjgl.opengl.GL12;
+
+import net.minecraft.client.renderer.FogRenderer;
 
 public class OffScreenRenderer implements AutoCloseable {
     private final NativeImage nativeImage;
@@ -70,11 +71,18 @@ public class OffScreenRenderer implements AutoCloseable {
     public void setupOrtographicRendering() {
         float angle = 36;
         float renderHeight = 0;
-        float renderScale = 48;
+        float renderScale = 100;
         float rotation = 45;
+
+        // Set up GL state for GUI rendering where the 16x16 item will fill the entire framebuffer
+        RenderSystem.setProjectionMatrix(
+                Matrix4f.orthographic(-1, 1, 1, -1, 1000, 3000));
 
         var poseStack = RenderSystem.getModelViewStack();
         poseStack.setIdentity();
+        poseStack.translate(0.0F, 0.0F, -2000.0F);
+
+        FogRenderer.setupNoFog();
 
         poseStack.scale(1, -1, -1);
         poseStack.mulPose(Vector3f.YP.rotationDegrees(-180));
@@ -88,6 +96,9 @@ public class OffScreenRenderer implements AutoCloseable {
         Quaternion rotate = Vector3f.YP.rotationDegrees(rotation);
         poseStack.mulPose(flip);
         poseStack.mulPose(rotate);
+
+        RenderSystem.applyModelViewMatrix();
+        Lighting.setupLevel(poseStack.last().pose());
     }
 
     public void setupPerspectiveRendering(float zoom, float fov, Vector3f eyePos, Vector3f lookAt) {

@@ -1,20 +1,24 @@
 package appeng.siteexport;
 
-import appeng.block.crafting.CraftingStorageBlock;
-import appeng.block.misc.QuartzFixtureBlock;
-import appeng.block.misc.VibrationChamberBlock;
-import appeng.core.definitions.AEBlockEntities;
-import appeng.core.definitions.AEBlocks;
-import appeng.core.definitions.BlockDefinition;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+
+import com.mojang.math.Vector3f;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
+import appeng.api.util.AEColor;
+import appeng.block.crafting.CraftingStorageBlock;
+import appeng.block.misc.QuartzFixtureBlock;
+import appeng.block.misc.VibrationChamberBlock;
+import appeng.core.definitions.AEBlocks;
+import appeng.core.definitions.AEParts;
+import appeng.core.definitions.BlockDefinition;
 
 final class SiteExportScenes {
     private SiteExportScenes() {
@@ -57,6 +61,37 @@ final class SiteExportScenes {
                 singleBlock(AEBlocks.SPATIAL_IO_PORT),
                 singleBlock(AEBlocks.VIBRATION_CHAMBER, b -> b.setValue(VibrationChamberBlock.ACTIVE, true)));
 
+        Scene qnbScenes = new Scene(blockArea(), "large/qnb.png");
+        qnbScenes.blocks.put(new BlockPos(-1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(-1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 1, 0), AEBlocks.QUANTUM_LINK.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(-1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        scenes.add(qnbScenes);
+
+        scenes.clear();
+
+        Scene coloredCables = new Scene(blockArea(), "large/colored_cables.png");
+        for (var x = 0; x < 4; x++) {
+            var item = AEParts.COVERED_CABLE.item(switch (x) {
+                default -> AEColor.PURPLE;
+                case 1 -> AEColor.BLACK;
+                case 2 -> AEColor.ORANGE;
+                case 3 -> AEColor.CYAN;
+            });
+            for (var z = 0; z < 3; z++) {
+                coloredCables.putCable(new BlockPos(x, 0, z), item);
+            }
+            coloredCables.putCable(new BlockPos(x, 0, 0), AEParts.COVERED_CABLE.item(AEColor.TRANSPARENT));
+        }
+        coloredCables.waitTicks = 3;
+        coloredCables.centerOn = new Vector3f(2f, 0, 1.5f);
+        scenes.add(coloredCables);
+
         return scenes;
     }
 
@@ -69,8 +104,8 @@ final class SiteExportScenes {
     }
 
     private static Scene singleBlock(String filename,
-                                     Block block,
-                                     Function<BlockState, BlockState> stateCustomizer) {
+            Block block,
+            Function<BlockState, BlockState> stateCustomizer) {
         String fullPath = "large/" + filename + ".png";
         var scene = new Scene(bigBlockSettings(), fullPath);
         var state = block.defaultBlockState();
@@ -82,6 +117,14 @@ final class SiteExportScenes {
     private static SceneRenderSettings bigBlockSettings() {
         var settings = new SceneRenderSettings();
         settings.ortographic = false;
+        settings.width = 512;
+        settings.height = 512;
+        return settings;
+    }
+
+    private static SceneRenderSettings blockArea() {
+        var settings = new SceneRenderSettings();
+        settings.ortographic = true;
         settings.width = 512;
         settings.height = 512;
         return settings;
