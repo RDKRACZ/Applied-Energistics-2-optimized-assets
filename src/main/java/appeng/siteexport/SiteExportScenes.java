@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+import appeng.core.definitions.AEBlockEntities;
+import appeng.core.definitions.AEItems;
 import com.mojang.math.Vector3f;
 
 import net.minecraft.core.BlockPos;
@@ -43,7 +45,7 @@ final class SiteExportScenes {
                 singleBlock(AEBlocks.QUARTZ_FIXTURE, b -> b.setValue(QuartzFixtureBlock.FACING, Direction.EAST)),
                 singleBlock(AEBlocks.CHISELED_QUARTZ_BLOCK),
                 singleBlock(AEBlocks.FLUIX_BLOCK),
-                singleBlock(AEBlocks.INSCRIBER),
+                createInscriberScene(),
                 singleBlock(AEBlocks.ITEM_INTERFACE),
                 singleBlock(AEBlocks.FLUID_INTERFACE),
                 singleBlock(AEBlocks.IO_PORT),
@@ -61,20 +63,24 @@ final class SiteExportScenes {
                 singleBlock(AEBlocks.SPATIAL_IO_PORT),
                 singleBlock(AEBlocks.VIBRATION_CHAMBER, b -> b.setValue(VibrationChamberBlock.ACTIVE, true)));
 
-        Scene qnbScenes = new Scene(blockArea(), "large/qnb.png");
-        qnbScenes.blocks.put(new BlockPos(-1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(0, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(-1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(0, 1, 0), AEBlocks.QUANTUM_LINK.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(-1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(0, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        qnbScenes.blocks.put(new BlockPos(1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
-        scenes.add(qnbScenes);
+        scenes.add(createQnbScene());
+        scenes.add(createColoredCablesScene());
 
-        scenes.clear();
+        return scenes;
+    }
 
+    private static Scene createInscriberScene() {
+        var scene = singleBlock(AEBlocks.INSCRIBER);
+        scene.postSetup = serverLevel -> {
+            serverLevel.getBlockEntity(BlockPos.ZERO, AEBlockEntities.INSCRIBER).ifPresent(be -> {
+                be.getInternalInventory().setItemDirect(1, AEItems.LOGIC_PROCESSOR_PRESS.stack());
+            });
+        };
+        scene.waitTicks = 2;
+        return scene;
+    }
+
+    private static Scene createColoredCablesScene() {
         Scene coloredCables = new Scene(blockArea(), "large/colored_cables.png");
         for (var x = 0; x < 4; x++) {
             var item = AEParts.COVERED_CABLE.item(switch (x) {
@@ -89,10 +95,23 @@ final class SiteExportScenes {
             coloredCables.putCable(new BlockPos(x, 0, 0), AEParts.COVERED_CABLE.item(AEColor.TRANSPARENT));
         }
         coloredCables.waitTicks = 3;
-        coloredCables.centerOn = new Vector3f(2f, 0, 1.5f);
-        scenes.add(coloredCables);
+        coloredCables.centerOn = new Vector3f(2.5f, 0, 1.5f);
+        return coloredCables;
+    }
 
-        return scenes;
+    private static Scene createQnbScene() {
+        Scene qnbScenes = new Scene(blockArea(), "large/qnb.png");
+        qnbScenes.blocks.put(new BlockPos(-1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 0, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(-1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 1, 0), AEBlocks.QUANTUM_LINK.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 1, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(-1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(0, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.blocks.put(new BlockPos(1, 2, 0), AEBlocks.QUANTUM_RING.block().defaultBlockState());
+        qnbScenes.centerOn = new Vector3f(0.5f, 1.5f, 0.5f);
+        return qnbScenes;
     }
 
     private static Scene singleBlock(BlockDefinition<?> block) {

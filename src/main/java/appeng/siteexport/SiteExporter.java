@@ -1,21 +1,10 @@
 package appeng.siteexport;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import appeng.core.AppEng;
+import appeng.recipes.handlers.InscriberRecipe;
 import com.google.common.io.MoreFiles;
 import com.google.common.io.RecursiveDeleteOption;
 import com.mojang.serialization.Lifecycle;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.command.v1.ClientCommandManager;
@@ -34,6 +23,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
@@ -41,8 +31,17 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import appeng.core.AppEng;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Exports a data package for use by the website.
@@ -120,7 +119,8 @@ public final class SiteExporter {
         var siteExport = new SiteExportWriter();
 
         var usedVanillaItems = new HashSet<Item>();
-        processRecipes(client, usedVanillaItems, siteExport);
+
+        dumpRecipes(client.level.getRecipeManager(), usedVanillaItems, siteExport);
 
         // Iterate over all Applied Energistics items
         var stacks = new ArrayList<ItemStack>();
@@ -148,9 +148,9 @@ public final class SiteExporter {
     }
 
     private static void processItems(Minecraft client,
-            SiteExportWriter siteExport,
-            List<ItemStack> items,
-            Path assetFolder) throws IOException {
+                                     SiteExportWriter siteExport,
+                                     List<ItemStack> items,
+                                     Path assetFolder) throws IOException {
         Path iconsFolder = assetFolder.resolve("icons");
         if (Files.exists(iconsFolder)) {
             MoreFiles.deleteRecursively(iconsFolder, RecursiveDeleteOption.ALLOW_INSECURE);
@@ -178,32 +178,6 @@ public final class SiteExporter {
         return Registry.ITEM.getKey(item);
     }
 
-    private static void processRecipes(Minecraft client, Set<Item> usedVanillaItems, SiteExportWriter siteExport)
-            throws Exception {
-
-        // Fake a level in a temporary folder
-        var tempLevel = Files.createTempDirectory("templevel");
-
-        var registryAccess = RegistryAccess.builtin();
-        var levelStorageSource = new LevelStorageSource(tempLevel, tempLevel, DataFixers.getDataFixer());
-        var levelAccess = levelStorageSource.createAccess("siteexport");
-
-        // Save a barebones level.dat
-        var levelsettings = MinecraftServer.DEMO_SETTINGS;
-        var worldgensettings = WorldGenSettings.demoSettings(registryAccess);
-        levelAccess.saveDataTag(registryAccess,
-                new PrimaryLevelData(levelsettings, worldgensettings, Lifecycle.stable()));
-
-        try (var stem = client.makeServerStem(registryAccess, Minecraft::loadDataPacks, Minecraft::loadWorldData, false,
-                levelAccess)) {
-            var recipeManager = stem.serverResources().getRecipeManager();
-
-            dumpRecipes(recipeManager, usedVanillaItems, siteExport);
-        } finally {
-            MoreFiles.deleteRecursively(tempLevel, RecursiveDeleteOption.ALLOW_INSECURE);
-        }
-    }
-
     private static void addVanillaItem(Set<Item> items, ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return;
@@ -223,20 +197,24 @@ public final class SiteExporter {
                 continue;
             }
 
+            if (!recipe.getResultItem().isEmpty()) {
+                addVanillaItem(vanillaItems, recipe.getResultItem());
+            }
+            for (Ingredient ingredient : recipe.getIngredients()) {
+                for (ItemStack item : ingredient.getItems()) {
+                    addVanillaItem(vanillaItems, item);
+                }
+            }
+
             if (recipe instanceof CraftingRecipe craftingRecipe) {
-                if (craftingRecipe.isSpecial() || craftingRecipe.getResultItem().isEmpty()) {
+                if (craftingRecipe.isSpecial()) {
                     continue;
                 }
-
-                addVanillaItem(vanillaItems, craftingRecipe.getResultItem());
-
-                for (Ingredient ingredient : craftingRecipe.getIngredients()) {
-                    for (ItemStack item : ingredient.getItems()) {
-                        addVanillaItem(vanillaItems, item);
-                    }
-                }
-
                 siteExport.addRecipe(craftingRecipe);
+            } else if (recipe instanceof AbstractCookingRecipe cookingRecipe) {
+                siteExport.addRecipe(cookingRecipe);
+            } else if (recipe instanceof InscriberRecipe inscriberRecipe) {
+                siteExport.addRecipe(inscriberRecipe);
             }
         }
 

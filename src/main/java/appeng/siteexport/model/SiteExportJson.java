@@ -12,5 +12,9 @@ public class SiteExportJson {
 
     public Map<String, CraftingRecipeJson> craftingRecipes = new HashMap<>();
 
+    public Map<String, SmeltingRecipeJson> smeltingRecipes = new HashMap<>();
+
+    public Map<String, InscriberRecipeJson> inscriberRecipes = new HashMap<>();
+
     public Map<String, ItemInfoJson> items = new HashMap<>();
 }
