@@ -17,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.ShapelessRecipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -52,19 +52,20 @@ public class SiteExportWriter {
     public void addRecipe(CraftingRecipe recipe) {
         var json = new CraftingRecipeJson();
         json.id = recipe.getId().toString();
-        json.shapeless = recipe instanceof ShapelessRecipe;
+        json.shapeless = true;
+        if (recipe instanceof ShapedRecipe shapedRecipe) {
+            json.shapeless = false;
+            json.width = shapedRecipe.getWidth();
+            json.height = shapedRecipe.getHeight();
+        }
 
         json.resultItem = Registry.ITEM.getKey(recipe.getResultItem().getItem()).toString();
         json.resultCount = recipe.getResultItem().getCount();
 
         var ingredients = recipe.getIngredients();
-        json.ingredients = new String[9][];
+        json.ingredients = new String[ingredients.size()][];
         for (int i = 0; i < json.ingredients.length; i++) {
-            if (i < ingredients.size()) {
-                json.ingredients[i] = convertIngredient(ingredients.get(i));
-            } else {
-                json.ingredients[i] = new String[0];
-            }
+            json.ingredients[i] = convertIngredient(ingredients.get(i));
         }
 
         siteExport.craftingRecipes.put(json.id, json);
